@@ -12,13 +12,24 @@ module StripeMock
         items = items.values if items.respond_to?(:values)
         subscription[:items][:data] = plans.map do |plan|
           if items && items.size == plans.size
-            quantity = items &&
-              items.detect { |item| item[:plan] == plan[:id] }[:quantity] || 1
+            quantity = items.detect { |item| item[:plan] == plan[:id] }[:quantity] || 1
             Data.mock_subscription_item({ plan: plan, quantity: quantity })
+          elsif plans.size === 1 && options[:quantity]
+            Data.mock_subscription_item({ plan: plan, quantity: options[:quantity] })
           else
             Data.mock_subscription_item({ plan: plan })
           end
         end
+
+        # Subscription plan and quantity are only populated if there is a single subscription item.
+        if subscription[:items][:data].length === 1
+          the_only_subscription_item = subscription[:items][:data].first
+          plan_and_maybe_quantity = the_only_subscription_item.slice(:plan, :quantity).select { |k, v| !v.nil? }
+          subscription.merge!(plan_and_maybe_quantity)
+        else
+          subscription.merge!(plan: nil, quantity: nil)
+        end
+
         subscription
       end
 
